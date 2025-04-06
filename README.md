@@ -31,6 +31,9 @@ python examples/run_example.py
 ```
 The script will process the sample DXF files located in examples/input/ and save the marked versions to a new folder (e.g., examples/input_Marked/).
 
+# Other features
+
+
 # Project Structure
 ```bash
 SnapMark/
@@ -42,3 +45,12 @@ SnapMark/
 │   ├── checking/            # Input validation
 │   └── __init__.
 ```
+
+## License
+MIT License — feel free to use, modify, and share with attribution.
+
+## Contributions
+Pull requests are welcome! If you find issues or have suggestions, please open an issue in the repository.
+
+## Author
+Federico Sidraschi https://www.linkedin.com/in/federico-sidraschi-059a961b9/
