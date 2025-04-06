@@ -13,17 +13,18 @@ Modular structure for extending operations
 Easy integration into existing workflows
 
 # Quick Start
-1. Clone the repository:
+## 1. Clone the repository:
 
 ```bash
 git clone https://github.com/tuo-utente/snapmark.git
-2. Install the dependencies:
 ```
+## 2. Install the dependencies:
+
 
 ```bash
-3. pip install -r requirements.txt
-Run the example:
+pip install -r requirements.txt
 ```
+## 3.Run the example:
 
 ```bash
 python examples/run_example.py
