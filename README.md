@@ -31,8 +31,33 @@ python examples/run_example.py
 ```
 The script will process the sample DXF files located in examples/input/ and save the marked versions to a new folder (e.g., examples/input_Marked/).
 
-# Other features
+## Parameters:
+### Object:
+suffix: adding suffix on both new file and new folder.
 
+### AddMark operation:
+sequence: text put on file.
+layer: choose layer where put the text
+min_char/max_char: minimum/maximum heigth of text
+align: part f file where mark is located ('r'->right, 'l'->left, 'c'->center)
+start_y: minimum place for text on y axis
+down to: allowing text toi be smaller if does not fit while min_char. 
+
+### Sequence:
+You can built a fix sequence or concatenate your sequence by file name, folder name, etc.
+
+## Other features
+### CountHoles
+```bash
+ToMark.add_operation(CountHoles(find_circle_by_radius(max_diam=5.2, min_diam=4.8)))
+```
+In this example, you can count all holes between 4.8 and 5.2 mm diameter in all files on a folder. Total and partial result.
+
+### AddX
+```bash
+ToMark.add_operation(AddX(find_circle_by_radius(min_diam=2, max_diam=15), size=15, delete_hole=True, layer='Marcatura'))
+```
+In this example, all holes between 2 and 15 mm will be substituite from a 'X' sign of 15mm, on 'Marcatura' layer. Holes will been deleted.
 
 # Project Structure
 ```bash
