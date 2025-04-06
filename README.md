@@ -31,7 +31,7 @@ python examples/run_example.py
 ```
 The script will process the sample DXF files located in examples/input/ and save the marked versions to a new folder (e.g., examples/input_Marked/).
 
-Project Structure
+# Project Structure
 ```bash
 SnapMark/
 │
