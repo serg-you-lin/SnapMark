@@ -1,10 +1,3 @@
-import sys
-import os
-
-# Aggiungi la cartella 'SnapMark' al percorso di ricerca dei moduli
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'SnapMark')))
-
-# Ora importa il modulo
 from SnapMark.SnapMark import *
 
 # Cartella contenente i file DXF
