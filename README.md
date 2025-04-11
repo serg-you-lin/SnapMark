@@ -16,7 +16,7 @@ Easy integration into existing workflows
 ## 1. Clone the repository:
 
 ```bash
-git clone https://github.com/tuo-utente/snapmark.git
+git clone https://github.com/serg-you-lin/snapmark.git
 ```
 ## 2. Install the dependencies:
 
