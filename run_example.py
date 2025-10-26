@@ -1,6 +1,8 @@
+
 from snapmark.core import iteration_manager  
 from snapmark.sequence.sequence_legacy import Conc
 from snapmark.operations.basic_operations import AddMark
+
 
 # Cartella contenente i file DXF
 folder_path = r'Examples/Input'
