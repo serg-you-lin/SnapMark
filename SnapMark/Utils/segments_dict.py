@@ -1,4 +1,4 @@
-# Dizionario dei segmenti per ciascun numero (il punto minore in 'X' deve corrispondere a '0')
+# Dictionary of segments for each number (the lowest point in 'X' must correspond to '0')
 number_segments_dict = {
     '0': [(0, 0.3), (0, 3.7), (0.3, 4), (1.4, 4), (1.7, 3.7), (1.7, 0.3), (1.4, 0), (0.3, 0), (0, 0.3), (1.7, 3.7)],
     # '0': [(2, 4), (0, 0), (2, 0), (2, 4), (0, 4), (0, 0)],

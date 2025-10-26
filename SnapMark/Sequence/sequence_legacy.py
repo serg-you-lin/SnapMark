@@ -1,17 +1,34 @@
 import os
 
 class Sequence:
+    """Base class for creating sequences of text for marking."""
     def get_sequence_text(self, folder, file_name):
+        """
+        Retrieves the sequence text based on the provided folder and file name.
+
+        Args:
+            folder (str): The folder path where the file is located.
+            file_name (str): The name of the file.
+
+        Returns:
+            str: The sequence text.
+
+        Raises:
+            Exception: If the sequence text has not been constructed.
+        """
+
         if self.text == None:
-            raise Exception('Costruire la sequenza')   #Con raise non serve il return
+            raise Exception('Build the sequence first.') 
         else:
             return self.text
 
     def prompt_seq(self):
-        self.text = input("Inserire testo della marcatura: ")
+        """Prompts the user to input the marking text."""
+        self.text = input("Enter marking text: ")
 
 
-class Conc(Sequence):   # creare sequenza concatenando le varie stringhe
+class Conc(Sequence): 
+    """Creates a sequence by concatenating various strings.""" 
     FIRST_FOLDER_CHAR = '[FDFC]'
     FOLDER_NAME ='[FDN]'
     LAST_FILE_CHAR_IF_LETTER = '[LIL]'
@@ -22,26 +39,52 @@ class Conc(Sequence):   # creare sequenza concatenando le varie stringhe
     OEP_FILE_NAME = '[OEPFN]'
 
     def __init__(self, *text):
+        """
+        Initializes the Conc class with the specified text parts.
+
+        Args:
+            text: Variable length argument list of text parts to concatenate.
+        """
+
         self.text = text
         self.number = 1
-
+    
     def __sep_logic(file_name, sep):
+        """Extracts the part of the file name before the specified separator."""
         separator = file_name.find(sep)
         name = file_name[:separator]
         return name
 
     def num_char(self, number=1):
+        """
+        Sets the number of characters to consider for the first folder name.
+
+        Args:
+            number (int): The number of characters (default is 1).
+
+        Returns:
+            self: For method chaining.
+        """
+
         self.number = number
 
         return self 
 
-                
-
     def get_sequence_text(self, folder, file_name):
+        """
+        Constructs the sequence text based on the specified folder and file name.
+
+        Args:
+            folder (str): The folder path where the file is located.
+            file_name (str): The name of the file.
+
+        Returns:
+            str: The constructed sequence text in uppercase.
+        """
+
         text_list = []
         for t in self.text:
             if t == Conc.FIRST_FOLDER_CHAR:
-                # Ottieni il nome dell'ultima cartella nel percorso
                 folder_name = os.path.basename(os.path.normpath(folder))
                 num = self.number
                 first_char_folder = folder_name[:num]
@@ -50,10 +93,8 @@ class Conc(Sequence):   # creare sequenza concatenando le varie stringhe
             elif t == Conc.FILE_NAME:
                 last_dot = file_name.rfind('.')
                 text_list.append(file_name[:last_dot])
-                # text_list.append(Conc.__sep_logic('.'))
 
             elif t == Conc.FILE_NAME_CAMPANA:
-                # text_list.append(Conc.__sep_logic('_'))
                 first_underscore = file_name.find('_')
                 text_list.append(file_name[:first_underscore])
 
@@ -76,17 +117,25 @@ class Conc(Sequence):   # creare sequenza concatenando le varie stringhe
             else:
                 text_list.append(t)
 
-        return '-'.join(text_list)    
+        result = '-'.join(text_list)  
+        return result.upper()  
         
 
-
-    def solo_questa_folder(self):
-        pass
-
 class FixSeq(Sequence):
+    """Class for fixed sequences."""
+
     def __init__(self, text):
+        """
+        Initializes the FixSeq class with the specified text.
+
+        Args:
+            text (str): The fixed sequence text.
+        """
         self.text = text
 
 class PromptSeq(Sequence):
+    """Class for prompting the user to input a sequence."""
+    
     def __init__(self):
-        self.text = input("Insert sequence text: " )
+        """Initializes the PromptSeq class and prompts for sequence text."""
+        self.text = input("Insert sequence text: ")

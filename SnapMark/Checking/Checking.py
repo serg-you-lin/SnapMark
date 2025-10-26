@@ -1,8 +1,8 @@
 import sys
 import os
 import ezdxf
-from SnapMark.MarkAlgorithm.MarkAlgorithm import *
-from SnapMark.AddEntities.AddEntities import *
+from snapmark.mark_algorithm.mark_algorithm import *
+from snapmark.entities.add_entities import *
 
 
 # Print the names of the layers
@@ -12,32 +12,57 @@ def print_layers(doc):
         print(layer.dxf.name)
         return print(layer.dxf.name)
     
-
-# Cerca fori specifici
 def find_spec_holes(doc, diametro_minimo=0, diametro_massimo=float('inf')):
-    holes = []  # Lista per memorizzare le entità circolari
+    """
+    Searches for specific holes in a document based on diameter range.
+    
+    Args:
+        doc: The document containing the entities to search.
+        diametro_minimo: Minimum diameter of the holes to find (default: 0).
+        diametro_massimo: Maximum diameter of the holes to find (default: infinity).
+    
+    Returns:
+        A list of circular entities that match the specified diameter range.
+    """
+    holes = []  # List to store circular entities
 
-    msp = doc.modelspace()  # Accedi al modello spaziale del disegno
+    msp = doc.modelspace()  # Access the model space of the drawing
 
-    # Itera attraverso tutte le entità nel modello spaziale
-    for entity in msp.query('CIRCLE'):  # Filtra solo le entità di tipo cerchio
-        diametro = entity.dxf.radius * 2  # Calcola il diametro del cerchio
-        if diametro_minimo <= diametro <= diametro_massimo:
+    # Iterate through all entities in the model space
+    for entity in msp.query('CIRCLE'):  # Filter only entities of type circle
+        diameter = entity.dxf.radius * 2  # Calculate the diameter of the circle
+        if diametro_minimo <= diameter <= diametro_massimo:
             holes.append(entity)
-            # print(entity)# Aggiungi l'entità circolare alla lista se rientra nel range di diametri
+            # Add the circular entity to the list if it falls within the diameter range
         
     return holes
 
+# # Cerca fori specifici
+# def find_spec_holes(doc, diametro_minimo=0, diametro_massimo=float('inf')):
+#     holes = []  # Lista per memorizzare le entità circolari
+
+#     msp = doc.modelspace()  # Accedi al modello spaziale del disegno
+
+#     # Itera attraverso tutte le entità nel modello spaziale
+#     for entity in msp.query('CIRCLE'):  # Filtra solo le entità di tipo cerchio
+#         diametro = entity.dxf.radius * 2  # Calcola il diametro del cerchio
+#         if diametro_minimo <= diametro <= diametro_massimo:
+#             holes.append(entity)
+#             # print(entity)# Aggiungi l'entità circolare alla lista se rientra nel range di diametri
+        
+#     return holes
+
 def find_entities(file_path, entity_type):
-    # Carica il file DXF utilizzando ezdxf
+    """Return a list of DXF entities of the given type from the specified file."""
+    # Load DXF file using ezdxf
     doc = ezdxf.readfile(file_path)
     
-    # Estrai le entità dal modello
+    # extract entities from model
     msp = doc.modelspace()
 
     entities = []
 
-    # Itera tutte le linee nel modello
+    # Iterate through all entities of the specified type
     for entity in msp.query(entity_type):
         entities.append(entity)
 
@@ -46,77 +71,106 @@ def find_entities(file_path, entity_type):
 def print_entities(msp):
     for e in msp.query():
         print(e)
-        #print(e.dxf.flags)
-        #print(e.dxf.degree)
-        #print(e.control_points)
+
+
+
+# def find_longer_entity(entities):
+
+#     lato_piu_lungo = None
+#     lunghezza_lato_piu_lungo = 0
+#     lato_piu_lungo_is_sotto = True
+#     minimum_point = float('inf')
+#     # Itera tutte le linee nel modello
+#     for entity in entities:
+#         minimum_point = min(entity.dxf.start.y, entity.dxf.end.y, minimum_point)      
+#         # Calcola la lunghezza della linea utilizzando il teorema di Pitagora
+#         lunghezza = ((entity.dxf.start.x - entity.dxf.end.x) ** 2 + (entity.dxf.start.y - entity.dxf.end.y) ** 2) ** 0.5
+#         # Se la lunghezza della linea è maggiore della lunghezza massima finora trovata, aggiornala
+#         if lunghezza > lunghezza_lato_piu_lungo:
+#             lunghezza_lato_piu_lungo = lunghezza
+#             lato_piu_lungo = entity
+    
+#     # Controllare che il lato più lungo sia una linea perimetrale
+#     if min(lato_piu_lungo.dxf.start.y, lato_piu_lungo.dxf.end.y) > minimum_point:
+#         lato_piu_lungo_is_sotto = False
+    
+#     return lato_piu_lungo, lato_piu_lungo_is_sotto
 
 
 def find_longer_entity(entities):
-
-    lato_piu_lungo = None
-    lunghezza_lato_piu_lungo = 0
-    lato_piu_lungo_is_sotto = True
+    """
+    Finds the longest entity among the given entities and checks if it is below a certain minimum point.
+    
+    Args:
+        entities: A list of entities to evaluate.
+    
+    Returns:
+        A tuple containing the longest entity and a boolean indicating if it is below the minimum point.
+    """
+    
+    longest_side = None
+    longest_side_length = 0
+    longest_side_is_below = True
     minimum_point = float('inf')
-    # Itera tutte le linee nel modello
+    
+    # Iterate through all the lines in the model
     for entity in entities:
         minimum_point = min(entity.dxf.start.y, entity.dxf.end.y, minimum_point)      
-        # Calcola la lunghezza della linea utilizzando il teorema di Pitagora
-        lunghezza = ((entity.dxf.start.x - entity.dxf.end.x) ** 2 + (entity.dxf.start.y - entity.dxf.end.y) ** 2) ** 0.5
-        # Se la lunghezza della linea è maggiore della lunghezza massima finora trovata, aggiornala
-        if lunghezza > lunghezza_lato_piu_lungo:
-            lunghezza_lato_piu_lungo = lunghezza
-            lato_piu_lungo = entity
+        # Calculate the length of the line using the Pythagorean theorem
+        length = ((entity.dxf.start.x - entity.dxf.end.x) ** 2 + (entity.dxf.start.y - entity.dxf.end.y) ** 2) ** 0.5
+        # If the length of the line is greater than the maximum length found so far, update it
+        if length > longest_side_length:
+            longest_side_length = length
+            longest_side = entity
     
-    # Controllare che il lato più lungo sia una linea perimetrale
-    # print('Lato + lungo', lunghezza_lato_piu_lungo)
-    # print('Minimum point: ', minimum_point)
-    # print('Start y l+l: ', lato_piu_lungo.dxf.start.y)
-    # print('End y l+l: ', lato_piu_lungo.dxf.end.y)
-    if min(lato_piu_lungo.dxf.start.y, lato_piu_lungo.dxf.end.y) > minimum_point:
-        lato_piu_lungo_is_sotto = False
-    # print("Minimum point: ", minimum_point)
-    # print("Punto inferiore del lato più lungo: ", min(lato_piu_lungo.dxf.start.y, lato_piu_lungo.dxf.end.y))
-    return lato_piu_lungo, lato_piu_lungo_is_sotto
-
+    # Check if the longest side is a perimeter line
+    if min(longest_side.dxf.start.y, longest_side.dxf.end.y) > minimum_point:
+        longest_side_is_below = False
     
-
-# conta i fori in una lista
-
-def count_holes(hole_list):
-    holes = []  # Lista per memorizzare le entità circolari
-
-    # Itera attraverso tutte i fori
-    for hole in hole_list:  
-        holes.append(hole)  # Aggiungi l'entità circolare alla lista
-        
-    num_holes = len(holes)
-    # print(f"Nel file {filename} sono presenti {num_holes} fori dal diametro selezionato")
-    return num_holes
+    return longest_side, longest_side_is_below
 
 
-# Trova centro di lista di fori
+
 def find_circle_centers(holes_list):
-    centers = []  # Lista per memorizzare i centri dei cerchi
+    """
+    Finds the centers of circles from a list of holes.
+    
+    Args:
+        holes_list: A list of circular entities representing holes.
+    
+    Returns:
+        A list of tuples containing the (x, y) coordinates of the circle centers.
+    """
+    centers = []  # List to store the centers of the circles
 
-    # Itera attraverso le entità circolari nella lista holes_list
-    for circle in holes_list:  # Utilizza la lista passata come argomento
-        center_x = circle.dxf.center.x  # Estrai la coordinata x del centro del cerchio
-        center_y = circle.dxf.center.y  # Estrai la coordinata y del centro del cerchio
-        centers.append((center_x, center_y))  # Aggiungi le coordinate x e y del centro alla lista
+    # Iterate through the circular entities in the holes_list
+    for circle in holes_list:  # Use the list passed as an argument
+        center_x = circle.dxf.center.x  # Extract the x coordinate of the circle's center
+        center_y = circle.dxf.center.y  # Extract the y coordinate of the circle's center
+        centers.append((center_x, center_y))  # Add the x and y coordinates of the center to the list
         
     return centers
 
-# Cerca i fori di un file e rileva il centro.
+
 def find_circle_centers_2(doc):
-    centers = []  # Lista per memorizzare i centri dei cerchi
+    """
+    Searches for circles in a document and detects their centers.
+    
+    Args:
+        doc: The document containing the entities to search.
+    
+    Returns:
+        A list of tuples containing the (x, y) coordinates of the circle centers.
+    """
+    centers = []  # List to store the centers of the circles
 
-    msp = doc.modelspace()  # Accedi al modello spaziale del disegno
+    msp = doc.modelspace()  # Access the model space of the drawing
 
-    # Itera attraverso tutte le entità nel modello spaziale
-    for circle in msp.query('CIRCLE'):  # Filtra solo le entità di tipo cerchio
-        center_x = circle.dxf.center.x  # Estrai la coordinata x del centro del cerchio
-        center_y = circle.dxf.center.y  # Estrai la coordinata y del centro del cerchio
-        centers.append((center_x, center_y))  # Aggiungi le coordinate x e y del centro alla lista
+    # Iterate through all entities in the model space
+    for circle in msp.query('CIRCLE'):  # Filter only entities of type circle
+        center_x = circle.dxf.center.x  # Extract the x coordinate of the circle's center
+        center_y = circle.dxf.center.y  # Extract the y coordinate of the circle's center
+        centers.append((center_x, center_y))  # Add the x and y coordinates of the center to the list
         
     return centers
 
@@ -124,54 +178,6 @@ def find_circle_centers_2(doc):
 def change_layer(entities, new_layer):
     for entity in entities:
         entity.set_dxf_attrib('layer', new_layer)
-
-
-
-# Funzione principale da chiamare in tutti gli script su cui vogliamo itereare in intera cartella.
-def iter_on_a_folder(folder_path, main):
-    
-    # Estrai il nome dell'ultima directory (il nome della cartella) dalla variabile folder_path
-    output_folder_name = os.path.basename(folder_path)
-
-    # Aggiungi "_numerata" al nome della cartella
-    output_folder_name += "_AddMark"
-
-    # Combina il nuovo nome della cartella con il percorso del genitore per ottenere il percorso completo della nuova cartella di output
-    output_folder = os.path.join(os.path.dirname(folder_path), output_folder_name)
-    
-    # Esegui lo script per tutti i file nella cartella specificata
-    try:
-
-        # Cartella alternativa per i nuovi file
-        os.makedirs(output_folder, exist_ok=True)
-
-        # Elenco dei file nella cartella
-        dxf_files = [f for f in os.listdir(folder_path) if f.endswith(".DXF") or f.endswith(".dxf")]
-
-        for dxf_file in dxf_files:
-            file_path = os.path.join(folder_path, dxf_file)
-
-
-            # Apri il file DXF originale
-            original_doc = ezdxf.readfile(file_path)
-            
-            copied_doc = main(original_doc, dxf_file)
-
-            
-            # Salva il file DXF modificato nella cartella di output con lo stesso nome del file originale
-            new_filename = os.path.splitext(dxf_file)[0] + "_MARK.dxf"
-            output_file_path = os.path.join(output_folder, new_filename)
-            copied_doc.saveas(output_file_path)
-            
-        
-            print(f"Numeri aggiunti a '{new_filename}'")
-            
-    except IOError:
-        print(f"Non è un file DXF o si è verificato un errore I/O generico.")
-        sys.exit(1)
-    except ezdxf.DXFStructureError:
-        print(f"File DXF non valido o corrotto.")
-        sys.exit(2)
 
 
 
