@@ -7,6 +7,12 @@ __pycache__/
 # C extensions
 *.so
 
+# Development files
+dev/
+*.pyc
+examples/output/
+
+
 # Distribution / packaging
 .Python
 build/
