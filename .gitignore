@@ -35,6 +35,8 @@ examples/output/
 output/
 tmp/
 temp/
+examples/
+Examples/
 
 # ===================================
 # Ambienti virtuali
