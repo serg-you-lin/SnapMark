@@ -1,23 +1,18 @@
-# Byte-compiled / optimized / DLL files
+# ===================================
+# Python base
+# ===================================
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 
-# C extensions
-*.so
-
-# Development files
-dev/
-*.pyc
-examples/output/
-
-
-# Distribution / packaging
+# ===================================
+# Build / Distribuzione / Packaging
+# ===================================
 .Python
 build/
-develop-eggs/
 dist/
+develop-eggs/
 downloads/
 eggs/
 .eggs/
@@ -29,22 +24,35 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# ===================================
+# File temporanei / Output locali
+# ===================================
+dev/
+examples/
+examples/output/
+output/
+tmp/
+temp/
 
-# Virtual environments
+# ===================================
+# Ambienti virtuali
+# ===================================
 venv/
 ENV/
 env/
 .venv/
 
+# ===================================
 # PyInstaller
+# ===================================
 *.manifest
 *.spec
 
-# Unit test / coverage reports
+# ===================================
+# Test / Coverage
+# ===================================
 htmlcov/
 .tox/
 .nox/
@@ -56,52 +64,39 @@ coverage.xml
 *.cover
 *.py,cover
 
-# MyPy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre
-.pyre/
-
-# PyCharm
+# ===================================
+# IDEs e Editor
+# ===================================
 .idea/
-
-# VSCode
 .vscode/
 
-# Mac OS
+# ===================================
+# OS specifici
+# ===================================
 .DS_Store
-
-# Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# dotenv
+# ===================================
+# Misc
+# ===================================
 .env
 .env.*
-
-# Jupyter Notebook
 .ipynb_checkpoints
-
-# Logs
 *.log
+*.bak
+*.tmp
+*.swp
 
-# Local SQLite DB
-*.sqlite3
-
-# Images/tests/temp data
+# ===================================
+# File vari
+# ===================================
 *.png
-#*.jpg
 *.jpeg
 *.gif
 *.csv
 *.xls
 #*.xlsx
-
-# Backup files
+*.sqlite3
 *~
-*.bak
-*.tmp
-*.swp
