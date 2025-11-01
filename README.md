@@ -1,81 +1,215 @@
 # SnapMark
+
 SnapMark is a Python-based tool designed to apply customizable markings to DXF files using a flexible sequence logic. It leverages the ezdxf library to manipulate DXF files and supports operations like adding counters, alignment, character scaling, and more.
 
+SnapMark is a Python library for adding customizable text markings to DXF (AutoCAD) files. Built on top of `ezdxf`, it provides a simple API for batch processing, custom sequences, and automated workflows.
+
+[![PyPI version](https://badge.fury.io/py/snapmark.svg)](https://badge.fury.io/py/snapmark)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Installation
+```bash
+pip install snapmark
+```
+
+## Quick Start
+```python
+import snapmark as sm
+
+# Mark all DXF files with their filename
+sm.mark_by_name("path/to/drawings")
+
+# Custom sequence: filename + folder name
+seq = (sm.SequenceBuilder()
+       .file_name()
+       .folder(num_chars=2)   # firts 2 chars of folder name
+       .build())
+
+sm.mark_with_sequence("path/to/drawings", seq, scale_factor=100)
+```
+
 ## Features
-Automatic DXF file scanning and processing
 
-Flexible character sequencing (e.g., counters, file-based naming, custom patterns)
+- ✅ **Simple API** - Mark files in one line
+- ✅ **Custom sequences** - Build complex marking logic with SequenceBuilder
+- ✅ **Batch operations** - Process entire folders with IterationManager
+- ✅ **Built-in backup** - Automatic .bak files before modifications
+- ✅ **Hole counting** - Count and analyze circles in drawings
+- ✅ **Extensible** - Easy to add custom operations
 
-Text scaling, alignment, and positioning
+## Use Cases
 
-Modular structure for extending operations
+- **Manufacturing**: Add part numbers and quantities to production drawings
+- **CAM workflows**: Automatically mark drawings before CNC processing
+- **Quality control**: Count holes and verify drawing specifications
+- **Batch processing**: Apply consistent markings across large drawing sets
 
-Easy integration into existing workflows
+## Examples
 
-# Quick Start
-## 1. Clone the repository:
+### Basic Marking
+```python
+import snapmark as sm
 
-```bash
-git clone https://github.com/serg-you-lin/snapmark.git
+# Mark with filename (simplest)
+sm.mark_by_name("drawings/")
+
+# Mark with first part of filename (e.g., "PART" from "PART_123_Q5.dxf")
+sm.mark_by_name_part("drawings/", separator='_', part_index=0)
 ```
-## 2. Install the dependencies:
 
+### Custom Sequences
+```python
+import snapmark as sm
 
-```bash
-pip install -r requirements.txt
+# Extract part number from filename like "S532_P5_SP4_Q2.dxf"
+def extract_part_number(folder, filename):
+    import re
+    match = re.search(r'P(\d+)', filename)
+    return f"P{match.group(1)}" if match else ""
+
+seq = (sm.SequenceBuilder()
+       .file_part(separator='_', part_index=0)  # "S532"
+       .custom(extract_part_number)              # "P5"
+       .build())
+
+sm.mark_with_sequence("drawings/", seq)
+# Result: "S532-P5"
 ```
-## 3.Run the example:
 
-```bash
-python examples/run_example.py
+### Count Holes
+```python
+import snapmark as sm
+
+# Simple count
+stats = sm.quick_count_holes("drawings/", min_diam=5, max_diam=10)
+print(f"Total holes: {stats['total_count']}")
+
+# With multiplier (extract quantity from filename, e.g. S532_P1_S235JR_SP4_Q2 where Q determines the number of identical pieces to cut) 
+def get_quantity(filename):
+    import re
+    match = re.search(r'Q(\d+)', filename)
+    return int(match.group(1)) if match else 1
+
+stats = sm.quick_count_holes(
+    "drawings/", 
+    min_diam=5, 
+    max_diam=10,
+    multiplier=get_quantity
+)
+print(f"Total holes (with qty): {stats['total_count']}")
 ```
-The script will process the sample DXF files located in examples/input/ and save the marked versions to a new folder (e.g., examples/input_Marked/).
 
-## Parameters:
-### Object:
-suffix: adding suffix on both new file and new folder.
+### Advanced Pipeline
+```python
+import snapmark as sm
 
-### AddMark operation:
-sequence: text put on file.
-layer: choose layer where put the text
-min_char/max_char: minimum/maximum heigth of text
-align: part f file where mark is located ('r'->right, 'l'->left, 'c'->center)
-start_y: minimum place for text on y axis
-down to: allowing text toi be smaller if does not fit while min_char. 
+# Multiple operations in sequence
+seq = sm.SequenceBuilder().file_name().build()
 
-### Sequence:
-You can built a fix sequence or concatenate your sequence by file name, folder name, etc.
-
-## Other features
-### CountHoles
-```bash
-ToMark.add_operation(CountHoles(find_circle_by_radius(max_diam=5.2, min_diam=4.8)))
+manager = sm.IterationManager("drawings/", use_backup_system=True)
+manager.add_operation(
+    sm.Aligner(),                    # Align drawing
+    sm.AddMark(seq, scale_factor=100),  # Add marking
+    sm.CountHoles(sm.find_circle_by_radius(5, 10))  # Count holes
+)
+manager.execute()
 ```
-In this example, you can count all holes between 4.8 and 5.2 mm diameter in all files on a folder. Total and partial result.
 
-### AddX
-```bash
-ToMark.add_operation(AddX(find_circle_by_radius(min_diam=2, max_diam=15), size=15, delete_hole=True, layer='Marcatura'))
-```
-In this example, all holes between 2 and 15 mm will be substituite from a 'X' sign of 15mm, on 'Marcatura' layer. Holes will been deleted.
+### Single File Processing
+```python
+import snapmark as sm
 
-# Project Structure
-```bash
-SnapMark/
-│
-├── snapmark/                # Main package
-│   ├── snapmark.py          # Main module combining logic
-│   ├── operations/          # Marking operations
-│   ├── sequence/            # Sequence logic
-│   ├── checking/            # Input validation
-│   └── __init__.
+seq = sm.SequenceBuilder().file_name().build()
+
+sm.process_single_file(
+    "drawing.dxf",
+    sm.Aligner(),
+    sm.AddMark(seq, scale_factor=100),
+    sm.AddX(sm.find_circle_by_radius(5, 10), x_size=8), # Replaces 5–10mm holes with X marks for manual drilling
+    use_backup=True
+)
 ```
+
+### Restore Backups
+```python
+import snapmark as sm
+
+# Undo all changes
+sm.restore_backup("drawings/")
+
+# Restore recursively in subfolders
+sm.restore_backup("drawings/", recursive=True)
+
+# Restore but keep .bak files
+sm.restore_backup("drawings/", delete_backups=False)
+```
+
+## API Overview
+
+### Shortcuts (Simple Usage)
+
+- `mark_by_name(folder)` - Mark with filename
+- `mark_by_name_part(folder, separator, part_index)` - Mark with filename part
+- `mark_with_sequence(folder, sequence)` - Mark with custom sequence
+- `quick_count_holes(folder, min_diam, max_diam)` - Count holes
+- `restore_backup(folder)` - Restore from backups
+- `process_single_file(file, *operations)` - Pipeline on single file
+
+### SequenceBuilder (Custom Sequences)
+```python
+seq = (sm.SequenceBuilder()
+       .file_name()                    # Full filename
+       .file_part(separator, index)    # Split filename
+       .folder(num_chars)              # Folder name
+       .literal("text")                # Fixed text
+       .custom(function)               # Custom function
+       .set_separator("-")             # Join character
+       .build())
+```
+
+### Operations (Advanced)
+
+- `AddMark(sequence)` - Add text marking
+- `Aligner()` - Aligns the drawing along its longest side in the X direction.
+- `CountHoles(find_func)` - Count circles
+- `AddX(find_func, x_size)` - Add X marks
+- `RemoveCircle(find_func)` - Remove circles
+- `SubstituteCircle(find_func, new_radius)` - Replace circles
+
+### IterationManager (Batch Processing)
+```python
+manager = sm.IterationManager(folder, use_backup_system=True)
+manager.add_operation(operation1, operation2, ...)
+manager.execute(recursive=False)
+```
+
+## Requirements
+
+- Python 3.8+
+- ezdxf >= 1.0.0
+
+## Documentation
+
+For detailed documentation and more examples, visit the [GitHub repository](https://github.com/serg-you-lin/SnapMark).
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
-MIT License — feel free to use, modify, and share with attribution.
 
-## Contributions
-Pull requests are welcome! If you find issues or have suggestions, please open an issue in the repository.
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Author
-Federico Sidraschi https://www.linkedin.com/in/federico-sidraschi-059a961b9/
+
+**Federico Sidraschi**  
+[LinkedIn](https://www.linkedin.com/in/federico-sidraschi-059a961b9/) | [GitHub](https://github.com/serg-you-lin)
+
+## Acknowledgments
+
+Built with [ezdxf](https://ezdxf.mozman.at/) - the excellent DXF library for Python.
+
+---
+
+**Keywords**: DXF, CAD, AutoCAD, marking, automation, batch processing, manufacturing, CNC, CAM
