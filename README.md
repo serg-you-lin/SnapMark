@@ -140,13 +140,13 @@ manager.add_operation(sm.AddMark(seq, scale_factor=100))
 manager.execute(recursive=True)
 ```
 
-### Single File Processing
+### Quick pipeline on a single file
 ```python
 import snapmark as sm
 
 seq = sm.SequenceBuilder().file_name().build()
 
-sm.process_single_file(
+sm.single_file_pipeline(
     "drawing.dxf",
     sm.Aligner(),
     sm.AddMark(seq, scale_factor=100),
