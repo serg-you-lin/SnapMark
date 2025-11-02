@@ -44,7 +44,7 @@ class Aligner(Operation):
             side = None
 
         if side is not None:
-            print("Side: ", side)
+            # print("Side: ", side)
             pp = get_pivot_point(side)
             angolo = comp_inclination(side)
                        

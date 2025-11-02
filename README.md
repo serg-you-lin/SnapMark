@@ -1,8 +1,16 @@
 # SnapMark
 
-SnapMark is a Python-based tool designed to apply customizable markings to DXF files using a flexible sequence logic. It leverages the ezdxf library to manipulate DXF files and supports operations like adding counters, alignment, character scaling, and more.
+SnapMark is a Python library for applying **customizable and intelligent text markings** to DXF (AutoCAD) files.  
+Built on top of [`ezdxf`](https://ezdxf.mozman.at/), it provides a **simple but powerful API** for batch processing, automatic alignment, and sequence-based text generation.
 
-SnapMark is a Python library for adding customizable text markings to DXF (AutoCAD) files. Built on top of `ezdxf`, it provides a simple API for batch processing, custom sequences, and automated workflows.
+It gives you full control over:
+- **Marking position** — choose exact coordinates or automatic placement based on geometry  
+- **Mark size and scaling** — adjust text size dynamically or with fixed scale factors  
+- **Smart collision avoidance** — automatically avoids internal contours, holes, and cutouts  
+- **Flexible automation** — process entire folders, subfolders, or single DXF files with custom pipelines  
+
+Whether you’re marking parts for manufacturing, numbering drawings for CNC cutting, or adding production info automatically, SnapMark helps you make your workflow faster and more consistent.
+
 
 [![PyPI version](https://badge.fury.io/py/snapmark.svg)](https://badge.fury.io/py/snapmark)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -55,7 +63,7 @@ import snapmark as sm
 sm.mark_by_name("drawings/")
 
 # Mark with first part of filename (e.g., "PART" from "PART_123_Q5.dxf")
-sm.mark_by_name_part("drawings/", separator='_', part_index=0)
+sm.mark_by_splitted_text("drawings/", separator='_', part_index=0)
 ```
 
 ### Custom Sequences
@@ -116,6 +124,22 @@ manager.add_operation(
 manager.execute()
 ```
 
+### Recursive Marking (Batch Mode)
+```python
+import snapmark as sm
+
+# Build a sequence: filename + first 2 chars of folder name
+seq = (sm.SequenceBuilder()
+       .file_name()
+       .folder(num_chars=2)
+       .build())
+
+# Apply marking recursively on all DXF files in subfolders
+manager = sm.IterationManager("dxfs", use_backup_system=True)
+manager.add_operation(sm.AddMark(seq, scale_factor=100))
+manager.execute(recursive=True)
+```
+
 ### Single File Processing
 ```python
 import snapmark as sm
@@ -150,7 +174,7 @@ sm.restore_backup("drawings/", delete_backups=False)
 ### Shortcuts (Simple Usage)
 
 - `mark_by_name(folder)` - Mark with filename
-- `mark_by_name_part(folder, separator, part_index)` - Mark with filename part
+- `mark_by_splitted_text(folder, separator, part_index)` - Mark with filename part
 - `mark_with_sequence(folder, sequence)` - Mark with custom sequence
 - `quick_count_holes(folder, min_diam, max_diam)` - Count holes
 - `restore_backup(folder)` - Restore from backups

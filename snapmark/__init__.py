@@ -99,7 +99,7 @@ __all__ = [
     # Sequence Builder
     'SequenceBuilder',
     'from_file_name',
-    'from_file_part',
+    'from_splitted_text',
 
     # Operations
     'Operation',

@@ -88,7 +88,7 @@ def quick_count_holes(file_or_folder, min_diam=0, max_diam=float('inf'),
     find_func = find_circle_by_radius(min_diam, max_diam)
     counter = CountHoles(find_func, mess=verbose)
     
-    # Aggiungi moltiplicatore se fornito
+    # Add multiplier if provided
     if multiplier:
         counter.mult(multiplier)
     
