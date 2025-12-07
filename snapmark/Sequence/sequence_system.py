@@ -60,24 +60,41 @@ class FileNameComponent(SequenceComponent):
 class FolderNameComponent(SequenceComponent):
     """Represents the folder name (optionally the first N characters)."""
 
-    def __init__(self, num_chars: int = None):
+    def __init__(self, num_chars: int = None, level: int = 0):
         """
-        Initializes the FolderNameComponent with an optional character limit.
+        Initializes the FolderNameComponent with an optional character limit and level.
 
         Args:
-            num_chars (int, optional): The number of characters to return from the folder name (default is None).
+            num_chars (int, optional): The number of characters to return from the folder name.
+            level (int, optional): Folder level relative to the file (default 0 = immediate parent).
+                                   0: parent folder (drawings)
+                                   1: grandparent folder (LOT2024A)
+                                   2: great-grandparent folder (Batches)
         """
-
         self.num_chars = num_chars
+        self.level = level
     
     def extract(self, folder: str, file_name: str) -> str:
-        """Returns the folder name, limited to the specified number of characters if provided."""
-
-        folder_name = os.path.basename(os.path.normpath(folder))
+        """Returns the folder name at the specified level."""
+        # Normalize path
+        normalized = os.path.normpath(folder)
+        parts = normalized.split(os.sep)
+        
+        # Remove empty parts
+        parts = [p for p in parts if p]
+        
+        # Compute index from end: -1 (parent), grandparent, and so on.
+        target_index = -(self.level + 1)
+        
+        if abs(target_index) > len(parts):
+            raise ValueError(f"Level {self.level} too deep for path: {folder}")
+        
+        folder_name = parts[target_index]
+        
         if self.num_chars:
             return folder_name[:self.num_chars]
         return folder_name
-
+    
 
 class FilePartComponent(SequenceComponent):
     """Represents a part of the file name using a specified separator."""
@@ -160,17 +177,30 @@ class SequenceBuilder:
         self.components.append(FileNameComponent())
         return self
     
-    def folder(self, num_chars: int = None) -> 'SequenceBuilder':
+    
+    def folder(self, num_chars: int = None, level: int = 0) -> 'SequenceBuilder':
         """
         Adds the folder name to the sequence.
         
         Args:
             num_chars (int, optional): If specified, takes only the first N characters of the folder name.
+            level (int, optional): Folder level relative to the file (default 0 = immediate parent).
+                                0: immediate parent folder
+                                1: grandparent folder  
+                                2: great-grandparent folder
+        
+        Examples:
+            Given path: /Batches/LOT2024A/drawings/part.dxf
+            
+            .folder()                      → "drawings"
+            .folder(num_chars=4)           → "draw"
+            .folder(level=1)               → "LOT2024A"
+            .folder(level=1, num_chars=4)  → "LOT2"
         """
-
-        self.components.append(FolderNameComponent(num_chars))
+        self.components.append(FolderNameComponent(num_chars, level))
         return self
-    
+
+
     def file_part(self, separator: str = '_', part_index: int = 0) -> 'SequenceBuilder':
         """
         Adds a part of the file name after splitting it.

@@ -62,3 +62,12 @@ def find_circle_by_radius(min_diam=0, max_diam=float('inf')):
     """Creates a function that finds circles within a specified diameter range."""
     
     return lambda doc: find_spec_holes(doc, min_diam, max_diam)
+
+
+
+def is_excluded_layer(entity_layer, excluded_list):
+    if excluded_list is None:
+        return False  # niente è escluso
+    layer = entity_layer.strip().lower()
+    excluded = [e.strip().lower() for e in excluded_list]
+    return layer in excluded

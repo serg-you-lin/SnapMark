@@ -14,6 +14,7 @@ class Aligner(Operation):
 
     def __init__(self):
         """Initializes the Aligner with the option to create a new alignment."""
+        super().__init__()
         self.create_new = True
 
     def execute(self, doc, folder, file_name): 

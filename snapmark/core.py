@@ -33,7 +33,6 @@ class IterationManager:
             folder_path (str): The path of the folder containing the DXF files.
             use_backup_system (bool): If True, uses .bak for backups (recommended).
         """
-
         self.folder_path = folder_path
         self.operation_list = []
         self.use_backup_system = use_backup_system and BACKUP_AVAILABLE
@@ -57,7 +56,6 @@ class IterationManager:
         Returns:
             dict: Statistics containing {'processed': int, 'modified': int, 'errors': list}.
         """
-
         if not self.operation_list:
             print("⚠ No operations added")
             return {'processed': 0, 'modified': 0, 'errors': []}
@@ -67,20 +65,18 @@ class IterationManager:
         if self.use_backup_system:
             print("🔧 Backup mode active")
         
-        # Processa file
+        # Process files
         stats = {'processed': 0, 'modified': 0, 'errors': []}
         
         for file_path in dxf_files:
-            try:
-                modified = self._process_single_file(str(file_path))
+            success = self._process_single_file(str(file_path))
+            
+            if success:
                 stats['processed'] += 1
-                if modified:
-                    stats['modified'] += 1
-            except Exception as e:
-                error_msg = f"Error on {file_path.name}: {str(e)}"
-                stats['errors'].append(error_msg)
-                print(f"❌ {error_msg}")
-        
+                stats['modified'] += 1
+            else:
+                stats['errors'].append(str(file_path))
+
         # Final messages
         self._final_messages()
         
@@ -92,37 +88,62 @@ class IterationManager:
         
         return stats
     
-    def _process_single_file(self, file_path: str) -> bool:
-        """Applies operations to a single file."""
-        
-        # Backup
-        if self.use_backup_system:
-            BackupManager.ensure_original(file_path)
-        
-        # Extract folder and filename
-        folder = os.path.dirname(file_path)
+    def _process_single_file(self, file_path: str):
+        """
+        Applies operations to a single file.
+        Catches ALL errors and prints ONE clear message.
+        """
         file_name = os.path.basename(file_path)
+        folder = os.path.dirname(file_path)
         
-        # Open file
-        doc = ezdxf.readfile(file_path)
-        
-        # Apply operations
+        # --- BACKUP ---
+        if self.use_backup_system:
+            try:
+                BackupManager.ensure_original(file_path)
+            except PermissionError:
+                print(f"🔒 The file '{file_name}' is currently open in another application. Please close it and try again.")
+                return False
+            except Exception as e:
+                print(f"❌ Backup error on '{file_name}': {str(e)}")
+                return False
+
+        # --- OPEN FILE ---
+        try:
+            doc = ezdxf.readfile(file_path)
+        except PermissionError:
+            print(f"🔒 The file '{file_name}' is currently open in another application. Please close it and try again.")
+            return False
+        except Exception as e:
+            print(f"❌ Cannot open '{file_name}': {str(e)}")
+            return False
+
+        # --- APPLY OPERATIONS ---
         should_save = False
         for operation in self.operation_list:
-            temp_should_save = operation.execute(doc, folder, file_name)
-            should_save = should_save or temp_should_save
-            operation.message(file_name)
-        
-        # Save if necessary
+            try:
+                result = operation.execute(doc, folder, file_name)
+                should_save = should_save or result
+                operation.message(file_name)
+            except Exception as e:
+                print(f"❌ Error processing '{file_name}': {str(e)}")
+                return False
+
+        # --- SAVE ---
         if should_save:
-            doc.saveas(file_path)
-            return True
-        
+            try:
+                doc.saveas(file_path)
+                return True
+            except PermissionError:
+                print(f"🔒 Cannot save '{file_name}' because it is open in another application.")
+                return False
+            except Exception as e:
+                print(f"❌ Cannot save '{file_name}': {str(e)}")
+                return False
+
         return False
     
     def _final_messages(self):
         """Prints final messages (e.g., from Counter)."""
-        
         try:
             from .operations.counter import Counter
             for operation in self.operation_list:

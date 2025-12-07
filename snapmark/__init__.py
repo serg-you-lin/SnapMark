@@ -85,7 +85,7 @@ from .checking.checking import (
 
 
 # ========== METADATA ==========
-__version__ = "2.0.0"
+__version__ = "2.0.4"
 __author__ = "serg_you_lin"
 __all__ = [
     # Shortcuts (main API)

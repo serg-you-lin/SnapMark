@@ -1,20 +1,25 @@
 # SnapMark
 
-SnapMark is a Python library for applying **customizable and intelligent text markings** to DXF (AutoCAD) files.  
-Built on top of [`ezdxf`](https://ezdxf.mozman.at/), it provides a **simple but powerful API** for batch processing, automatic alignment, and sequence-based text generation.
-
-It gives you full control over:
-- **Marking position** — choose exact coordinates or automatic placement based on geometry  
-- **Mark size and scaling** — adjust text size dynamically or with fixed scale factors  
-- **Smart collision avoidance** — automatically avoids internal contours, holes, and cutouts  
-- **Flexible automation** — process entire folders, subfolders, or single DXF files with custom pipelines  
-
-Whether you’re marking parts for manufacturing, numbering drawings for CNC cutting, or adding production info automatically, SnapMark helps you make your workflow faster and more consistent.
-
+SnapMark is a Python library for applying intelligent, customizable text markings and engraving paths on DXF (AutoCAD) files.
+It is designed to generate laser-engraving traces (not cutting paths) that make each part identifiable through incised labels, codes, and metadata. 
+Built on top of the excellent [`ezdxf`](https://ezdxf.mozman.at/), it provides a simple API for marking, alignment, hole analysis, and batch processing — tailored for manufacturing, CNC workflows, and automated drawing preparation.
 
 [![PyPI version](https://badge.fury.io/py/snapmark.svg)](https://badge.fury.io/py/snapmark)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## ⚠️ Unit & Scale Notice
+
+SnapMark is designed for sheet-metal parts measured in millimeters.
+
+Since DXF files may contain arbitrary units (meters, inches, kilometers, or undefined scale), loading a drawing in a different unit system may produce text markings that appear extremely large, extremely small, or misplaced.
+
+If your DXF is not in millimeters, you must rescale it before processing, or the resulting engraving paths may not match the actual geometry.
+
+A scale-validation step will be added in a future release to automatically warn users when a drawing appears to be out of the expected millimeter range.
+
 
 ## Installation
 ```bash
@@ -39,12 +44,13 @@ sm.mark_with_sequence("path/to/drawings", seq, scale_factor=100)
 
 ## Features
 
-- ✅ **Simple API** - Mark files in one line
-- ✅ **Custom sequences** - Build complex marking logic with SequenceBuilder
-- ✅ **Batch operations** - Process entire folders with IterationManager
-- ✅ **Built-in backup** - Automatic .bak files before modifications
-- ✅ **Hole counting** - Count and analyze circles in drawings
-- ✅ **Extensible** - Easy to add custom operations
+- ✅ **Simple API** - Mark files in a single function call
+- ✅ **Custom sequences** - Combine filename parts, folder names, literals, and custom logic
+- ✅ **Automatic Alignment** - Normalize orientation before marking
+- ✅ **Batch Processing** - Process folders and subfolders with IterationManager
+- ✅ **Backup System** - Automatic .bak creation and restoration
+- ✅ **Hole Utilities** - Fast hole detection and counting for quality checks
+- ✅ **Extensible Architecture** - Add your own operations and processing steps
 
 ## Use Cases
 
@@ -53,123 +59,7 @@ sm.mark_with_sequence("path/to/drawings", seq, scale_factor=100)
 - **Quality control**: Count holes and verify drawing specifications
 - **Batch processing**: Apply consistent markings across large drawing sets
 
-## Examples
-
-### Basic Marking
-```python
-import snapmark as sm
-
-# Mark with filename (simplest)
-sm.mark_by_name("drawings/")
-
-# Mark with first part of filename (e.g., "PART" from "PART_123_Q5.dxf")
-sm.mark_by_splitted_text("drawings/", separator='_', part_index=0)
-```
-
-### Custom Sequences
-```python
-import snapmark as sm
-
-# Extract part number from filename like "S532_P5_SP4_Q2.dxf"
-def extract_part_number(folder, filename):
-    import re
-    match = re.search(r'P(\d+)', filename)
-    return f"P{match.group(1)}" if match else ""
-
-seq = (sm.SequenceBuilder()
-       .file_part(separator='_', part_index=0)  # "S532"
-       .custom(extract_part_number)              # "P5"
-       .build())
-
-sm.mark_with_sequence("drawings/", seq)
-# Result: "S532-P5"
-```
-
-### Count Holes
-```python
-import snapmark as sm
-
-# Simple count
-stats = sm.quick_count_holes("drawings/", min_diam=5, max_diam=10)
-print(f"Total holes: {stats['total_count']}")
-
-# With multiplier (extract quantity from filename, e.g. S532_P1_S235JR_SP4_Q2 where Q determines the number of identical pieces to cut) 
-def get_quantity(filename):
-    import re
-    match = re.search(r'Q(\d+)', filename)
-    return int(match.group(1)) if match else 1
-
-stats = sm.quick_count_holes(
-    "drawings/", 
-    min_diam=5, 
-    max_diam=10,
-    multiplier=get_quantity
-)
-print(f"Total holes (with qty): {stats['total_count']}")
-```
-
-### Advanced Pipeline
-```python
-import snapmark as sm
-
-# Multiple operations in sequence
-seq = sm.SequenceBuilder().file_name().build()
-
-manager = sm.IterationManager("drawings/", use_backup_system=True)
-manager.add_operation(
-    sm.Aligner(),                    # Align drawing
-    sm.AddMark(seq, scale_factor=100),  # Add marking
-    sm.CountHoles(sm.find_circle_by_radius(5, 10))  # Count holes
-)
-manager.execute()
-```
-
-### Recursive Marking (Batch Mode)
-```python
-import snapmark as sm
-
-# Build a sequence: filename + first 2 chars of folder name
-seq = (sm.SequenceBuilder()
-       .file_name()
-       .folder(num_chars=2)
-       .build())
-
-# Apply marking recursively on all DXF files in subfolders
-manager = sm.IterationManager("dxfs", use_backup_system=True)
-manager.add_operation(sm.AddMark(seq, scale_factor=100))
-manager.execute(recursive=True)
-```
-
-### Quick pipeline on a single file
-```python
-import snapmark as sm
-
-seq = sm.SequenceBuilder().file_name().build()
-
-sm.single_file_pipeline(
-    "drawing.dxf",
-    sm.Aligner(),
-    sm.AddMark(seq, scale_factor=100),
-    sm.AddX(sm.find_circle_by_radius(5, 10), x_size=8), # Replaces 5–10mm holes with X marks for manual drilling
-    use_backup=True
-)
-```
-
-### Restore Backups
-```python
-import snapmark as sm
-
-# Undo all changes
-sm.restore_backup("drawings/")
-
-# Restore recursively in subfolders
-sm.restore_backup("drawings/", recursive=True)
-
-# Restore but keep .bak files
-sm.restore_backup("drawings/", delete_backups=False)
-```
-
-## API Overview
+## API Overview (Essentials)
 
 ### Shortcuts (Simple Usage)
 
@@ -180,15 +70,17 @@ sm.restore_backup("drawings/", delete_backups=False)
 - `restore_backup(folder)` - Restore from backups
 - `process_single_file(file, *operations)` - Pipeline on single file
 
-### SequenceBuilder (Custom Sequences)
+
+### SequenceBuilder (core)
+
 ```python
 seq = (sm.SequenceBuilder()
-       .file_name()                    # Full filename
-       .file_part(separator, index)    # Split filename
-       .folder(num_chars)              # Folder name
-       .literal("text")                # Fixed text
-       .custom(function)               # Custom function
-       .set_separator("-")             # Join character
+       .file_name()
+       .file_part(separator="_", index=0)
+       .folder(num_chars=2)
+       .literal("TEXT")
+       .custom(lambda folder, file: "X")
+       .set_separator("-")
        .build())
 ```
 
@@ -201,12 +93,10 @@ seq = (sm.SequenceBuilder()
 - `RemoveCircle(find_func)` - Remove circles
 - `SubstituteCircle(find_func, new_radius)` - Replace circles
 
-### IterationManager (Batch Processing)
-```python
-manager = sm.IterationManager(folder, use_backup_system=True)
-manager.add_operation(operation1, operation2, ...)
-manager.execute(recursive=False)
-```
+
+📘 Documentation:
+(Documentation files will be available in the docs/ directory.)
+
 
 ## Requirements
 

@@ -1,7 +1,6 @@
 """
 Backup management system for DXF files.
 The backup is created as .dxf.bak and is automatically restored before each modification.
-TODO: Fix duplicate "not found" messages in recursive restore    
 """
 import os
 import shutil
@@ -52,6 +51,9 @@ class BackupManager:
             
         Returns:
             True if restored successfully, False if backup does not exist
+            
+        Raises:
+            PermissionError: If file is open in another application
         """
         backup_path = BackupManager.get_backup_path(file_path)
         
@@ -61,7 +63,13 @@ class BackupManager:
         
         # Delete the current file if it exists
         if os.path.exists(file_path):
-            os.remove(file_path)
+            try:
+                os.remove(file_path)
+            except PermissionError:
+                # FIX: removed reference to undefined variable 'e'
+                raise PermissionError(
+                    f"Cannot restore '{file_path}' because it is open in another application."
+                )
         
         # Restore from the backup
         if delete_backup:
@@ -69,11 +77,9 @@ class BackupManager:
             print(f"↻ Restored and backup deleted: {os.path.basename(file_path)}")
         else:
             shutil.copy2(backup_path, file_path)
-            # print(f"↻ Restored from backup: {os.path.basename(file_path)}")
         
         return True
-
-# TODO: Fix duplicate "not found" messages in recursive restore    
+    
     @staticmethod
     def restore_all_in_folder(folder_path: str, delete_backups: bool = False, 
                             recursive: bool = False):
@@ -105,13 +111,11 @@ class BackupManager:
                 
                 if BackupManager.restore_backup(original_path, delete_backup=delete_backups):
                     restored_count += 1
-                # else:
-                #     not_found_count += 1
         else:
             # Non-recursive mode (as before)
             for filename in os.listdir(folder_path):
                 if filename.endswith(f".dxf{BackupManager.BACKUP_EXTENSION}") or \
-                filename.endswith(f".DXF{BackupManager.BACKUP_EXTENSION}"):
+                   filename.endswith(f".DXF{BackupManager.BACKUP_EXTENSION}"):
                     
                     backup_path = os.path.join(folder_path, filename)
                     original_name = filename[:-len(BackupManager.BACKUP_EXTENSION)]
@@ -123,15 +127,12 @@ class BackupManager:
                         not_found_count += 1
         
         print(f"\n✓ Restored {restored_count} files in {folder_path}")
-        # if not_found_count > 0:
-        #     print(f"⚠ {not_found_count} backups not found")
         
         return {
             'restored': restored_count,
             'not_found': not_found_count,
             'folder': folder_path
         }
-
 
     @staticmethod
     def has_backup(file_path: str) -> bool:
@@ -146,6 +147,9 @@ class BackupManager:
         Otherwise, it creates a backup of the current file.
         
         This method should be called BEFORE any modification operation.
+        
+        Raises:
+            PermissionError: If file is open in another application
         """
         backup_path = BackupManager.get_backup_path(file_path)
         
@@ -155,7 +159,3 @@ class BackupManager:
         else:
             # No backup exists: create a backup of the current file (it is the original)
             BackupManager.create_backup(file_path, force=False)
-
-
-    
-    

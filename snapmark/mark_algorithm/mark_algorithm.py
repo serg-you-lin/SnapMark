@@ -1,6 +1,7 @@
 import ezdxf
 import numpy as np
 from snapmark.utils.segments_dict import number_segments_dict
+from snapmark.utils.helpers import is_excluded_layer
 # import matplotlib as plt
 
 
@@ -73,13 +74,13 @@ def find_intermediate_y(bottom_y, top_y, int_step=2):
 
 
 # Trasforma ogni entità in lista di segmenti espressi in tuple.
-def comp_segs_and_limits(msp, filtered_layer):
+def comp_segs_and_limits(msp, excluded_layers=None):
     """
     Converts entities in the model space to a list of line segments and their limits.
 
     Args:
         msp: The model space containing the entities to be processed.
-        filtered_layer: The layer from which to filter the entities for segment conversion.
+        excluded_layes: list of layers to skip entirely.
 
     Returns:
         A tuple containing:
@@ -90,55 +91,78 @@ def comp_segs_and_limits(msp, filtered_layer):
             - max_y: The maximum y-coordinate among all segments.
     """
 
+    if excluded_layers is None:
+        excluded_layers = []
+    elif isinstance(excluded_layers, str):
+        excluded_layers = [excluded_layers]
+
+    def skip(entity):
+        return is_excluded_layer(entity.dxf.layer, excluded_layers)
+    
     # Initializes lists for arcs and lines
     round_segs = []
     line_segs = []
     
     # Finds the minimum and maximum coordinate values among all lines    
     for entity in msp.query('LINE'):
-        if entity.dxf.layer == filtered_layer:
-            start_point = entity.dxf.start
-            end_point = entity.dxf.end
-            line_segs.append((start_point.x, start_point.y, end_point.x, end_point.y))
+        if skip(entity):
+            continue
+        start_point = entity.dxf.start
+        end_point = entity.dxf.end
+        line_segs.append((start_point.x, start_point.y, end_point.x, end_point.y))
 
-    # for entity in msp.query('LWPOLYLINE'):
-    #     pass
-    #     if entity.dxf.layer == filtered_layer:
-    #         # resulted_lines = [e in e for entity.dxf.explode]
-    #         for f in resulted_lines:
-    #             line_segs.append(())
+    for entity in msp.query('LWPOLYLINE'):
+        if skip(entity):
+            continue
+        verts = list(entity.vertices())
+        if len(verts) < 2:
+            continue
+
+        # Create consecutive segments
+        for i in range(len(verts) - 1):
+            x1, y1 = verts[i]
+            x2, y2 = verts[i + 1]
+            line_segs.append((x1, y1, x2, y2))
+
+        # if close, merge last with first
+        if entity.closed:
+            x1, y1 = verts[-1]
+            x2, y2 = verts[0]
+            line_segs.append((x1, y1, x2, y2))
 
 
     for entity in msp.query('CIRCLE ARC'):
-        if entity.dxf.layer == filtered_layer:
-            if entity.dxftype() == 'CIRCLE':
-                center_x, center_y = entity.dxf.center.x, entity.dxf.center.y
-                rad = entity.dxf.radius
-                num_segment = MIN_ARC_SEGS + rad//2
+        if skip(entity):
+            continue
 
-                ang = np.linspace(0, 2 * np.pi, int(num_segment) + 1)
-                x = center_x + rad * np.cos(ang)
-                y = center_y + rad * np.sin(ang)
-                coords = list(zip(x, y))
-                circ_segs = [(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]) for i in range(0, len(coords) - 2)]
-                circ_segs.append((coords[-1][0], coords[-1][1], coords[0][0], coords[0][1]))
-                round_segs.extend(circ_segs)
-            elif entity.dxftype() == 'ARC':
-                # print(entity.dxftype())
-                center_x, center_y = entity.dxf.center.x, entity.dxf.center.y
-                rad = entity.dxf.radius
-                start_angle = np.radians(entity.dxf.start_angle)
-                final_angle = np.radians(entity.dxf.end_angle)
-                if start_angle > final_angle:
-                    final_angle += 2 * np.pi
-                num_segment = MIN_ARC_SEGS + (rad//2) * ((final_angle - start_angle) / (2 * np.pi))
+        if entity.dxftype() == 'CIRCLE':
+            center_x, center_y = entity.dxf.center.x, entity.dxf.center.y
+            rad = entity.dxf.radius
+            num_segment = MIN_ARC_SEGS + rad//2
 
-                ang = np.linspace(start_angle, final_angle, int(num_segment) + 1)
-                x = center_x + rad * np.cos(ang)
-                y = center_y + rad * np.sin(ang)
-                coords = list(zip(x, y))
-                arc_segs = [(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]) for i in range(0, len(coords) - 2)]
-                round_segs.extend(arc_segs)
+            ang = np.linspace(0, 2 * np.pi, int(num_segment) + 1)
+            x = center_x + rad * np.cos(ang)
+            y = center_y + rad * np.sin(ang)
+            coords = list(zip(x, y))
+            circ_segs = [(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]) for i in range(0, len(coords) - 2)]
+            circ_segs.append((coords[-1][0], coords[-1][1], coords[0][0], coords[0][1]))
+            round_segs.extend(circ_segs)
+
+        elif entity.dxftype() == 'ARC':
+            center_x, center_y = entity.dxf.center.x, entity.dxf.center.y
+            rad = entity.dxf.radius
+            start_angle = np.radians(entity.dxf.start_angle)
+            final_angle = np.radians(entity.dxf.end_angle)
+            if start_angle > final_angle:
+                final_angle += 2 * np.pi
+            num_segment = MIN_ARC_SEGS + (rad//2) * ((final_angle - start_angle) / (2 * np.pi))
+
+            ang = np.linspace(start_angle, final_angle, int(num_segment) + 1)
+            x = center_x + rad * np.cos(ang)
+            y = center_y + rad * np.sin(ang)
+            coords = list(zip(x, y))
+            arc_segs = [(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]) for i in range(0, len(coords) - 2)]
+            round_segs.extend(arc_segs)
 
             
     tot_segs = round_segs + line_segs
@@ -240,7 +264,7 @@ def find_shared_spaces(top_interceptions, bottom_interceptions):
 ###################################################################################################################
 
 # Main algorithm to find space for a sequence
-def find_space_for_sequence(lenght_sequence, height_sequence, doc, align, start_y, step, margin, filtered_layer):
+def find_space_for_sequence(lenght_sequence, height_sequence, doc, align, start_y, step, margin, excluded_layers):
     """
     Finds a valid space for placing a sequence of specified length and height within a drawing.
 
@@ -252,7 +276,7 @@ def find_space_for_sequence(lenght_sequence, height_sequence, doc, align, start_
         start_y (float): The starting y-coordinate for the search.
         step (float): The step size for incrementing or decrementing the y-coordinate during the search.
         margin (float): The margin to be added around the sequence.
-        filtered_layer (str): The layer from which to filter entities for segment conversion.
+        excluded_layes: list of layers to skip for segment conversion.
 
     Returns:
         tuple: A tuple containing:
@@ -270,7 +294,7 @@ def find_space_for_sequence(lenght_sequence, height_sequence, doc, align, start_
     msp = doc.modelspace()
     
     # Filter entities from the specified layer    
-    segs, min_x, min_y, max_x, max_y = comp_segs_and_limits(msp, filtered_layer)
+    segs, min_x, min_y, max_x, max_y = comp_segs_and_limits(msp, excluded_layers)
 
     y = min_y + start_y
     start_x = None
@@ -412,7 +436,7 @@ def sequence_dim(sequence, x_pos, y_pos, space):
 # Level 0 -- Function to place sequence on valid point of model space
 ###################################################################################################################
 
-def place_sequence(doc, text, scale_factor, filtered_layer, space=1.5, min_char=5,\
+def place_sequence(doc, text, scale_factor, excluded_layers, space=1.5, min_char=5,\
                    max_char=20, arbitrary_x=None, arbitrary_y=None,\
                    align='c', start_y=1, step=2, margin=1, down_to=None):
     """
@@ -422,7 +446,7 @@ def place_sequence(doc, text, scale_factor, filtered_layer, space=1.5, min_char=
         doc: The document where the sequence will be placed.
         text (str): The sequence of characters to be placed.
         scale_factor (float): The scaling factor for the sequence dimensions.
-        filtered_layer (str): The layer from which to filter entities for placement.
+        excluded_layers (list): Layers wichh entities have to be skipped for placement.
         space (float): The spacing factor between characters (default is 1.5).
         min_char (float): The minimum height for characters (default is 5).
         max_char (float): The maximum height for characters (default is 20).
@@ -485,7 +509,7 @@ def place_sequence(doc, text, scale_factor, filtered_layer, space=1.5, min_char=
     lenght_sequence, height_sequence = sequence_dim(sequence, x_pos, y_pos, space)
     
     if arbitrary_x == None or arbitrary_y == None:
-        x, y = find_space_for_sequence(lenght_sequence, height_sequence, doc, align, start_y, step, margin, filtered_layer)
+        x, y = find_space_for_sequence(lenght_sequence, height_sequence, doc, align, start_y, step, margin, excluded_layers)
         if down_to == None:
             down_to = min_char
         while x == None or y == None:
@@ -497,7 +521,7 @@ def place_sequence(doc, text, scale_factor, filtered_layer, space=1.5, min_char=
                 scale_factor = scale_factor * rescale_factor
                 sequence = rescale_sequence(text, scale_factor, x_pos, y_pos)
                 lenght_sequence, height_sequence = sequence_dim(sequence, x_pos, y_pos, space)
-                x, y = find_space_for_sequence(lenght_sequence, height_sequence, doc, align, start_y, step, margin, filtered_layer)
+                x, y = find_space_for_sequence(lenght_sequence, height_sequence, doc, align, start_y, step, margin, excluded_layers)
         if x == None or y == None:
             sequence = NS()
         else:
