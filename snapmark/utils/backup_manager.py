@@ -21,6 +21,7 @@ class BackupManager:
     def create_backup(file_path: str, force: bool = False) -> bool:
         """
         Creates a backup of the original file (only if it does not already exist).
+        Works only with DXF files.
         
         Args:
             file_path: Path of the file to back up
@@ -29,6 +30,11 @@ class BackupManager:
         Returns:
             True if the backup was created, False if it already existed
         """
+        # Control if it's a DXF file
+        if not file_path.lower().endswith('.dxf'):
+            print(f"⚠ Backup skipped: '{os.path.basename(file_path)}' is not a DXF file.")
+            return False
+    
         backup_path = BackupManager.get_backup_path(file_path)
         
         # If the backup already exists and we are not forcing, do nothing
@@ -80,59 +86,53 @@ class BackupManager:
         
         return True
     
+
+
     @staticmethod
-    def restore_all_in_folder(folder_path: str, delete_backups: bool = False, 
+    def restore_all_in_folder(file_or_folder: str, delete_backups: bool = False, 
                             recursive: bool = False):
         """
-        Restores all .dxf.bak backups in the specified folder.
+        Restores DXF files from backups. Works with a single file or a folder.
         
         Args:
-            folder_path: Folder containing the backups
+            file_or_folder: Path to a file or folder
             delete_backups: If True, deletes the backups after restoration
-            recursive: If True, searches in subfolders as well
+            recursive: If True, searches subfolders (only relevant for folders)
         
         Returns:
             dict: Restoration statistics
         """
-        from pathlib import Path
-        
         restored_count = 0
         not_found_count = 0
-        
-        if recursive:
-            # Search recursively in all subfolders
-            backup_files = []
-            for ext in [".dxf.bak", ".DXF.bak"]:
-                backup_files.extend(Path(folder_path).rglob(f"*{ext}"))
-            
+
+        path_obj = Path(file_or_folder)
+
+        if path_obj.is_file():
+            # Single file
+            if BackupManager.restore_backup(str(path_obj), delete_backup=delete_backups):
+                restored_count += 1
+            else:
+                not_found_count += 1
+        elif path_obj.is_dir():
+            # Folder
+            if recursive:
+                backup_files = list(path_obj.rglob("*.dxf.bak")) + list(path_obj.rglob("*.DXF.bak"))
+            else:
+                backup_files = [p for p in path_obj.iterdir() if p.suffix.lower() == ".bak" and p.stem.lower().endswith(".dxf")]
+
             for backup_path in backup_files:
-                # Remove .bak to get the original path
                 original_path = str(backup_path)[:-len(BackupManager.BACKUP_EXTENSION)]
-                
                 if BackupManager.restore_backup(original_path, delete_backup=delete_backups):
                     restored_count += 1
+                else:
+                    not_found_count += 1
         else:
-            # Non-recursive mode (as before)
-            for filename in os.listdir(folder_path):
-                if filename.endswith(f".dxf{BackupManager.BACKUP_EXTENSION}") or \
-                   filename.endswith(f".DXF{BackupManager.BACKUP_EXTENSION}"):
-                    
-                    backup_path = os.path.join(folder_path, filename)
-                    original_name = filename[:-len(BackupManager.BACKUP_EXTENSION)]
-                    original_path = os.path.join(folder_path, original_name)
-                    
-                    if BackupManager.restore_backup(original_path, delete_backup=delete_backups):
-                        restored_count += 1
-                    else:
-                        not_found_count += 1
-        
-        print(f"\n✓ Restored {restored_count} files in {folder_path}")
-        
-        return {
-            'restored': restored_count,
-            'not_found': not_found_count,
-            'folder': folder_path
-        }
+            print(f"⚠ File or folder not found: {file_or_folder}")
+            return {'restored': 0, 'not_found': 1, 'folder': str(file_or_folder)}
+
+        print(f"\n✓ Restored {restored_count} files in {file_or_folder}")
+        return {'restored': restored_count, 'not_found': not_found_count, 'folder': str(file_or_folder)}
+
 
     @staticmethod
     def has_backup(file_path: str) -> bool:

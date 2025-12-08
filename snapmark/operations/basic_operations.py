@@ -27,6 +27,7 @@ class Operation(ABC):
     def __init__(self):
         self.create_new = True 
         self.message_text = None
+        self.modifies_files = True
     
     @abstractmethod
     def execute(self, doc, folder, file_name):
@@ -130,7 +131,10 @@ class Operation(ABC):
                 stats['processed'] += 1
                 stats['modified'] += 1
             else:
-                stats['errors'] += 1
+                if operation_instance.modifies_files:
+                    stats['errors'] += 1
+                else:
+                    stats['processed'] += 1  
         
         print(f"\n✓ Processed: {stats['processed']}")
         print(f"✓ Modified: {stats['modified']}")

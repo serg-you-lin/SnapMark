@@ -30,12 +30,11 @@ MANIFEST
 # File temporanei / Output locali
 # ===================================
 dev/
-examples/
+examples/examples_garbage/
 examples/output/
 output/
 tmp/
 temp/
-examples/
 Examples/
 
 # ===================================

@@ -12,7 +12,7 @@ def file_in_use_error(file_name: str) -> str:
 
 def file_not_found_error(file_name: str) -> str:
     """Message when file does not exist."""
-    return f"❓ The file '{file_name}' was not found."
+    return f"❓ The file or the folder '{file_name}' was not found."
 
 
 def cannot_open_error(file_name: str, reason: str = None) -> str:
@@ -38,6 +38,25 @@ def backup_error(file_name: str, reason: str) -> str:
     """Message when backup operation fails."""
     return f"❌ Backup error on '{file_name}': {reason}"
 
+def invalid_path_error(path: str) -> str:
+    """Message when path is neither a file nor a folder."""
+    return f"❓ The path '{path}' does not exist."
+
+def not_a_dxf_error(file_name: str) -> str:
+    """Message when file is not a DXF."""
+    return f"❌ The file '{file_name}' is not a DXF file."
+
+def no_dxf_found_error(folder_path: str) -> str:
+    """Message when no DXF files found in folder."""
+    return f"❓ No DXF files found in '{folder_path}'."
+
+def dxf_3d_geometry_error(file_name: str) -> str:
+    """Message when 3D geometry is detected in the DXF file."""
+    return (
+        f"❌ 3D GEOMETRY DETECTED in '{file_name}'!\n\n"
+        "SnapMark only supports 2D drawings for laser marking.\n"
+        "Please flatten your DXF to 2D before processing and ensure all Z coordinates are zero.\n\n"
+    )
 
 # Success messages
 def backup_created(file_name: str) -> str:

@@ -127,7 +127,7 @@ def single_file_pipeline(file_path, *operations, use_backup=True):
     from .utils.backup_manager import BackupManager
     
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File non trovato: {file_path}")
+        raise FileNotFoundError(f"File not found: {file_path}")
     
     # Optional backup
     if use_backup:

@@ -18,8 +18,14 @@ Since DXF files may contain arbitrary units (meters, inches, kilometers, or unde
 
 If your DXF is not in millimeters, you must rescale it before processing, or the resulting engraving paths may not match the actual geometry.
 
-A scale-validation step will be added in a future release to automatically warn users when a drawing appears to be out of the expected millimeter range.
+## ⚠️ 3D Geometry Notice
 
+SnapMark works exclusively with 2D DXF geometry.
+If the drawing contains 3D entities (non-zero Z values, 3D polylines, meshes, solids, or blocks with elevation), SnapMark will refuse processing to avoid unpredictable text placement.
+
+Please ensure your DXF is flattened before use.
+
+---
 
 ## Installation
 ```bash
@@ -103,13 +109,10 @@ seq = (sm.SequenceBuilder()
 - Python 3.8+
 - ezdxf >= 1.0.0
 
-## Documentation
-
-For detailed documentation and more examples, visit the [GitHub repository](https://github.com/serg-you-lin/SnapMark).
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
 
 ## License
 
@@ -123,6 +126,11 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Acknowledgments
 
 Built with [ezdxf](https://ezdxf.mozman.at/) - the excellent DXF library for Python.
+
+## Examples
+
+SnapMark comes with a set of ready-to-run examples located in the `examples/` folder.  
+These examples demonstrate common operations, including restoring backups, counting holes, and basic marking.  
 
 ---
 

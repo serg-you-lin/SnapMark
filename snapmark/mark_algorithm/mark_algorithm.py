@@ -2,7 +2,7 @@ import ezdxf
 import numpy as np
 from snapmark.utils.segments_dict import number_segments_dict
 from snapmark.utils.helpers import is_excluded_layer
-# import matplotlib as plt
+from snapmark.utils.messages import dxf_3d_geometry_error
 
 
 # Classe per definire la sequenza di numeri
@@ -80,7 +80,7 @@ def comp_segs_and_limits(msp, excluded_layers=None):
 
     Args:
         msp: The model space containing the entities to be processed.
-        excluded_layes: list of layers to skip entirely.
+        excluded_layers: list of layers to skip entirely.
 
     Returns:
         A tuple containing:
@@ -89,6 +89,7 @@ def comp_segs_and_limits(msp, excluded_layers=None):
             - min_y: The minimum y-coordinate among all segments.
             - max_x: The maximum x-coordinate among all segments.
             - max_y: The maximum y-coordinate among all segments.
+            - is_2d: True if all geometry is 2D, False if 3D geometry detected.
     """
 
     if excluded_layers is None:
@@ -102,6 +103,7 @@ def comp_segs_and_limits(msp, excluded_layers=None):
     # Initializes lists for arcs and lines
     round_segs = []
     line_segs = []
+    is_2d = True
     
     # Finds the minimum and maximum coordinate values among all lines    
     for entity in msp.query('LINE'):
@@ -110,6 +112,8 @@ def comp_segs_and_limits(msp, excluded_layers=None):
         start_point = entity.dxf.start
         end_point = entity.dxf.end
         line_segs.append((start_point.x, start_point.y, end_point.x, end_point.y))
+        if start_point.z != 0 or end_point.z != 0:
+            is_2d = False   
 
     for entity in msp.query('LWPOLYLINE'):
         if skip(entity):
@@ -120,15 +124,27 @@ def comp_segs_and_limits(msp, excluded_layers=None):
 
         # Create consecutive segments
         for i in range(len(verts) - 1):
-            x1, y1 = verts[i]
-            x2, y2 = verts[i + 1]
+            x1, y1, *z1 = verts[i]
+            x2, y2, *z2 = verts[i + 1]
             line_segs.append((x1, y1, x2, y2))
+            
+            # ✅ FIX: gestione corretta liste vuote
+            z1_val = z1[0] if len(z1) > 0 else 0
+            z2_val = z2[0] if len(z2) > 0 else 0
+            if z1_val != 0 or z2_val != 0:
+                is_2d = False
 
         # if close, merge last with first
         if entity.closed:
-            x1, y1 = verts[-1]
-            x2, y2 = verts[0]
+            x1, y1, *z1 = verts[-1]
+            x2, y2, *z2 = verts[0]
             line_segs.append((x1, y1, x2, y2))
+            
+            # ✅ FIX: gestione corretta liste vuote
+            z1_val = z1[0] if len(z1) > 0 else 0
+            z2_val = z2[0] if len(z2) > 0 else 0
+            if z1_val != 0 or z2_val != 0:
+                is_2d = False       
 
 
     for entity in msp.query('CIRCLE ARC'):
@@ -136,6 +152,8 @@ def comp_segs_and_limits(msp, excluded_layers=None):
             continue
 
         if entity.dxftype() == 'CIRCLE':
+            if entity.dxf.center.z != 0:
+                is_2d = False
             center_x, center_y = entity.dxf.center.x, entity.dxf.center.y
             rad = entity.dxf.radius
             num_segment = MIN_ARC_SEGS + rad//2
@@ -149,6 +167,8 @@ def comp_segs_and_limits(msp, excluded_layers=None):
             round_segs.extend(circ_segs)
 
         elif entity.dxftype() == 'ARC':
+            if entity.dxf.center.z != 0:
+                is_2d = False
             center_x, center_y = entity.dxf.center.x, entity.dxf.center.y
             rad = entity.dxf.radius
             start_angle = np.radians(entity.dxf.start_angle)
@@ -177,7 +197,7 @@ def comp_segs_and_limits(msp, excluded_layers=None):
         max_x = max(max_x, start_x, end_x)
         max_y = max(max_y, start_y, end_y)
 
-    return tot_segs, min_x, min_y, max_x, max_y
+    return tot_segs, min_x, min_y, max_x, max_y, is_2d
 
 
 
@@ -291,10 +311,18 @@ def find_space_for_sequence(lenght_sequence, height_sequence, doc, align, start_
         placement coordinates for the sequence.
     """
 
+    global segments_cache
+
     msp = doc.modelspace()
+
+    if segments_cache is not None:
+        segs, min_x, min_y, max_x, max_y, is_2d = segments_cache
+    else:
+        # Filter entities from the specified layer    
+        segs, min_x, min_y, max_x, max_y, is_2d = comp_segs_and_limits(msp, excluded_layers)
     
     # Filter entities from the specified layer    
-    segs, min_x, min_y, max_x, max_y = comp_segs_and_limits(msp, excluded_layers)
+    segs, min_x, min_y, max_x, max_y, is_2d = comp_segs_and_limits(msp, excluded_layers)
 
     y = min_y + start_y
     start_x = None
@@ -377,6 +405,8 @@ def find_space_for_sequence(lenght_sequence, height_sequence, doc, align, start_
 # Global variable to store all y values, allowing retrieval if y has already been calculated.
 x_intercept_cache = {}
 
+# Global variable to cache segments and avoid recalculation
+segments_cache = None
 
 # Rescale sequence if necessary
 def rescale_sequence(text, scale_factor, start_x, start_y):
@@ -463,6 +493,7 @@ def place_sequence(doc, text, scale_factor, excluded_layers, space=1.5, min_char
 
     Raises:
         Exception: If the input text is empty.
+        ValueError: If 3D geometry is detected in the DXF file.
 
     Overview:
         This function calculates the dimensions of the sequence based on the characters provided and attempts to
@@ -472,9 +503,31 @@ def place_sequence(doc, text, scale_factor, excluded_layers, space=1.5, min_char
         or reaches the minimum height limit.
     """
     
-    x_intercept_cache.clear()   # Svuoto cache da eventuali y precedenti
+    x_intercept_cache.clear()  
+    segments_cache = None 
+
     if len(text) == 0:
         raise Exception('Empty sequence.')
+    
+    # ✅ Comp segs once and put in the cache
+    msp = doc.modelspace()
+    segments_cache = comp_segs_and_limits(msp, excluded_layers)
+    segs, min_x, min_y, max_x, max_y, is_2d = segments_cache
+    
+    # ✅ CHECK 3D
+    if not is_2d:
+        file_name = doc.filename if hasattr(doc, 'filename') else 'unknown file'
+        raise ValueError(dxf_3d_geometry_error(file_name))
+        # raise ValueError(
+        #     "❌ 3D GEOMETRY DETECTED!\n\n"
+        #     "SnapMark only supports 2D drawings for laser marking.\n"
+        #     "Please flatten your DXF to 2D before processing.\n\n"
+        #     "How to fix:\n"
+        #     "  • In AutoCAD/DraftSight: Use FLATTEN command\n"
+        #     "  • In FreeCAD: Export as 2D DXF\n"
+        #     "  • Ensure all Z coordinates are zero"
+        # )
+
     sequence = NS()
        
     height_sequence = 0.0

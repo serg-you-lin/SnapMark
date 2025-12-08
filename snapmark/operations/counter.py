@@ -14,6 +14,7 @@ class Counter(Operation):
         self.counter = 0
         self.create_new = False 
         self.is_processing_folder = False
+        self.modifies_files = False  
     
     def execute(self, doc, folder, file_name):
         """Abstract method to be implemented in subclasses."""
