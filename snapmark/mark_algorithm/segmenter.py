@@ -15,8 +15,17 @@ MIN_ARC_SEGS = 15
 class GeometryContext:
     def __init__(self, doc, excluded_layers=None, avoid_layers=None):
         msp = doc.modelspace()
+        # all_excluded = (excluded_layers or []) + (avoid_layers if isinstance(avoid_layers, list) else [avoid_layers] if avoid_layers else [])
+        if isinstance(excluded_layers, str):
+            excluded_layers = [excluded_layers]
+        if isinstance(avoid_layers, str):
+            avoid_layers = [avoid_layers]
+        all_excluded = (excluded_layers or []) + (avoid_layers or [])
+        
         self.segs, self.min_x, self.min_y, self.max_x, self.max_y, self.is_2d = \
-            comp_segs_and_limits(msp, excluded_layers)
+            comp_segs_and_limits(msp, all_excluded)
+        
+        # print(f"[DEBUG CTX] segs={len(self.segs)} min_x={self.min_x:.1f} min_y={self.min_y:.1f} max_x={self.max_x:.1f} max_y={self.max_y:.1f}")
         
         if not self.is_2d:
             file_name = doc.filename if hasattr(doc, 'filename') else 'unknown file'

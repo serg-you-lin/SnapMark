@@ -155,6 +155,30 @@ def make_u_shape_doc(outer_w=578, outer_h=178, u_depth=34, u_thickness=1):
 
     return doc, u_top
 
+def make_horseshoe_doc(outer_w=555, outer_h=500, leg_height=250, wall=24):
+    """
+    DXF sintetico a ferro di cavallo con gamba destra più corta.
+    Replica il caso Bug_mark_on_split: BL verticale passante nella gamba sinistra.
+    """
+    doc = ezdxf.new('R2010')
+    msp = doc.modelspace()
+
+    # Gamba sinistra (piena altezza)
+    msp.add_line((0, 0),         (0, outer_h))
+    msp.add_line((0, outer_h),   (outer_w, outer_h))       # traversa superiore
+    msp.add_line((outer_w, outer_h), (outer_w, outer_h - leg_height))  # gamba destra (più corta)
+    msp.add_line((outer_w - wall, outer_h - leg_height), (outer_w - wall, outer_h - wall))  # interno dx
+    msp.add_line((outer_w - wall, outer_h - wall), (wall, outer_h - wall))                  # interno top
+    msp.add_line((wall, outer_h - wall), (wall, 0))         # interno sx
+    msp.add_line((wall, 0), (outer_w, 0))                   # fondo
+    msp.add_line((outer_w, 0), (outer_w, outer_h - leg_height))  # chiude gamba dx
+
+    # BL verticale passante nella gamba sinistra
+    mid_x = wall / 2
+    msp.add_line((mid_x, 0), (mid_x, outer_h), dxfattribs={'layer': 'Bending'})
+
+    return doc
+
 # ═══════════════════════════════════════════════════════════
 # place_sequence — Tentativo 1
 # ═══════════════════════════════════════════════════════════
@@ -377,6 +401,46 @@ class TestHorizontalSegmentBug(unittest.TestCase):
             ctx=ctx
         )
         self.assertFalse(result, "Lo spazio che attraversa il bordo orizzontale della U non deve essere libero")
+
+class TestAvoidLayersHorseshoe(unittest.TestCase):
+    """
+    Regression per il bug: avoid_layers lasciava la BL in segs,
+    produceva intercette dispari e piazzava fuori dal contorno.
+    """
+
+    def test_001_avoid_layers_non_piazza_fuori_contorno(self):
+        """Con avoid_layers='Bending' la sequenza deve stare dentro il contorno."""
+        doc = make_horseshoe_doc()
+        result = place_sequence(
+            doc, "123", scale_factor=50,
+            avoid_layers='Bending',
+            min_char_height=5, max_char_height=20
+        )
+        self.assertGreater(len(result.sequence), 0, "Deve trovare spazio")
+        ctx = GeometryContext(doc, avoid_layers='Bending')
+        for _, position in result.sequence:
+            x, y = position[0], position[1]
+            self.assertGreaterEqual(x, ctx.min_x, f"x={x:.1f} fuori dal contorno sinistro")
+            self.assertLessEqual(x, ctx.max_x,    f"x={x:.1f} fuori dal contorno destro")
+            self.assertGreaterEqual(y, ctx.min_y, f"y={y:.1f} fuori dal contorno inferiore")
+            self.assertLessEqual(y, ctx.max_y,    f"y={y:.1f} fuori dal contorno superiore")
+
+    def test_002_avoid_e_excluded_entrambi_dentro_contorno(self):
+        """Sia avoid_layers che excluded_layers devono piazzare dentro il contorno."""
+        for mode, kwargs in [
+            ('avoid',    {'avoid_layers': 'Bending'}),
+            ('excluded', {'excluded_layers': 'Bending'}),
+        ]:
+            doc = make_horseshoe_doc()
+            result = place_sequence(doc, "123", scale_factor=50, min_char_height=5, max_char_height=20, **kwargs)
+            self.assertGreater(len(result.sequence), 0, f"{mode}: deve trovare spazio")
+            ctx = GeometryContext(doc)
+            for _, position in result.sequence:
+                x, y = position[0], position[1]
+                self.assertGreaterEqual(x, ctx.min_x, f"{mode}: x={x:.1f} fuori sinistro")
+                self.assertLessEqual(x, ctx.max_x,    f"{mode}: x={x:.1f} fuori destro")
+                self.assertGreaterEqual(y, ctx.min_y, f"{mode}: y={y:.1f} fuori inferiore")
+                self.assertLessEqual(y, ctx.max_y,    f"{mode}: y={y:.1f} fuori superiore")
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

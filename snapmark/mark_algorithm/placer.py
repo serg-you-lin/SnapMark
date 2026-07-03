@@ -62,6 +62,8 @@ def find_space_for_sequence(lenght_sequence, height_sequence, ctx, align, start_
 
                 shared_spaces_list = find_shared_spaces(x_intercept_top, x_intercept_bottom)
 
+                # if abs(y - 90.0) < 2:
+                #     print(f"[DEBUG INTERCEPT] y={y:.1f} bottom={x_intercept_bottom} top={x_intercept_top} shared={shared_spaces_list}")
                 if len(shared_spaces_list) > 0:
                     if align == 'r':
                         shared_spaces_list = shared_spaces_list[::-1]
@@ -77,7 +79,7 @@ def find_space_for_sequence(lenght_sequence, height_sequence, ctx, align, start_
                         if is_space:
                             x_left, x_right = spaces[0], spaces[1]
                             break
-
+                        
                 if is_space == True:
                     if align == 'l':
                         start_x = x_left + margin
@@ -95,7 +97,7 @@ def find_space_for_sequence(lenght_sequence, height_sequence, ctx, align, start_
                                 start_x = x_right - lenght_sequence - margin
                     start_y = y
                     break
-
+    
     if start_x is None:
         if y_to_try == []:
             print('Sequence needs to be adjusted due to y values.')
@@ -113,53 +115,39 @@ def find_space_for_sequence(lenght_sequence, height_sequence, ctx, align, start_
 def find_space_between_interceptions(x_left, x_right, lenght_sequence, height_sequence, segs, margin, y, avoid_segs=None, ctx=None):
     EPS = 1e-6
 
-    if (lenght_sequence + 2 * margin) <= (x_right - x_left):
+    if (lenght_sequence + 2 * margin) > (x_right - x_left):
+        return False
 
-        for (x1, y1, x2, y2) in segs:
+    # Segmenti orizzontali — il ray casting verticale non li intercetta mai,
+    # quindi vanno controllati esplicitamente sia per segs che per avoid_segs
+    for (x1, y1, x2, y2) in segs:
+        if abs(y1 - y2) < EPS:
+            if y - EPS <= y1 <= y + height_sequence + EPS:
+                if min(x1, x2) < x_right and max(x1, x2) > x_left:
+                    return False
+
+    if avoid_segs:
+        for (x1, y1, x2, y2) in avoid_segs:
             if abs(y1 - y2) < EPS:
                 if y - EPS <= y1 <= y + height_sequence + EPS:
-                    x_min_seg = min(x1, x2)
-                    x_max_seg = max(x1, x2)
-                    if x_min_seg < x_right and x_max_seg > x_left:
+                    if min(x1, x2) < x_right and max(x1, x2) > x_left:
                         return False
 
-        y_ints = find_intermediate_y(y, y + height_sequence)
-        for y_int in y_ints:
-            x_intercept = find_x_intercept(y_int, segs, ctx)
-            for interception in x_intercept:
-                if x_right > interception > x_left:
-                    return False
+    # Segmenti non-orizzontali — ray casting su y intermedi
+    y_ints = find_intermediate_y(y, y + height_sequence)
+    for y_int in y_ints:
+        x_intercept = find_x_intercept(y_int, segs, ctx)
+        for interception in x_intercept:
+            if x_left < interception < x_right:
+                return False
 
         if avoid_segs:
-            for (x1, y1, x2, y2) in avoid_segs:
-                if abs(y1 - y2) < EPS:
-                    if y - EPS <= y1 <= y + height_sequence + EPS: 
-                        x_min_seg = min(x1, x2)
-                        x_max_seg = max(x1, x2)
-                        if x_min_seg < x_right and x_max_seg > x_left:
-                            return False
-
-        y_ints = find_intermediate_y(y, y + height_sequence)
-        for y_int in y_ints:
-            x_intercept = find_x_intercept(y_int, segs, ctx)
-            for interception in x_intercept:
-                if x_right > interception > x_left:
+            x_avoid = find_x_intercept_raw(y_int, avoid_segs)
+            for interception in x_avoid:
+                if x_left < interception < x_right:
                     return False
 
-            if avoid_segs:
-                x_avoid = find_x_intercept_raw(y_int, avoid_segs)
-                if len(x_avoid) >= 2:
-                    mid = (x_left + x_right) / 2
-                    for i in range(0, len(x_avoid) - 1, 2):
-                        if x_avoid[i] < mid < x_avoid[i+1]:
-                            return False
-                    for interception in x_avoid:
-                        if x_left < interception < x_right:
-                            return False
-
-        return True
-    else:
-        return False
+    return True
     
 
 def find_shared_spaces(top_interceptions, bottom_interceptions):
