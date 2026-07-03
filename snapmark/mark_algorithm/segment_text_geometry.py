@@ -1,3 +1,7 @@
+"""
+segment_text_geometry.py
+"""
+
 import numpy as np
 from snapmark.utils.geometry import rotate_point, seg_angle, comp_centroid
 
@@ -42,23 +46,41 @@ def rotate_segment_text_sequence(sequence, pivot, angle):
 # Computation of start_y for rotated segment text sequence
 ##############################################################################
 
-def comp_start_y_rotated(segs_rotated, min_y_rotated, pivot):
+def comp_start_y_rotated(segs_rotated, min_y_rotated, pivot, anchor_margin=0.0):
     # Costruisce array di punti dai segs ruotati
     points = np.array(
         [(x1, y1) for (x1, y1, x2, y2) in segs_rotated] +
         [(x2, y2) for (x1, y1, x2, y2) in segs_rotated]
     )
-    
+
     _, y_centroide = comp_centroid(points)
     y_pivot = pivot[1]
     small_offset = 0.5
-    
+
     if y_centroide > y_pivot:
-        start_y = y_pivot - min_y_rotated + small_offset
+        start_y_r = y_pivot - min_y_rotated + small_offset + anchor_margin
     else:
-        start_y = y_pivot - min_y_rotated - small_offset
+        start_y_r = y_pivot - min_y_rotated - small_offset - anchor_margin
+
+    return start_y_r
+
+# def comp_start_y_rotated(segs_rotated, min_y_rotated, pivot):
+#     # Costruisce array di punti dai segs ruotati
+#     points = np.array(
+#         [(x1, y1) for (x1, y1, x2, y2) in segs_rotated] +
+#         [(x2, y2) for (x1, y1, x2, y2) in segs_rotated]
+#     )
     
-    return start_y
+#     _, y_centroide = comp_centroid(points)
+#     y_pivot = pivot[1]
+#     small_offset = 0.5
+    
+#     if y_centroide > y_pivot:
+#         start_y = y_pivot - min_y_rotated + small_offset
+#     else:
+#         start_y = y_pivot - min_y_rotated - small_offset
+    
+#     return start_y
 
 def ref_angle_and_pivot(ref_segment):
     """

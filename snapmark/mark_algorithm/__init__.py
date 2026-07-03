@@ -121,8 +121,10 @@ def _attempt1(segment_text, sequence, scale_factor, lenght_sequence, height_sequ
     return x, y, sequence
 
 
+# def _attempt2(segment_text, sequence, scale_factor, lenght_sequence, height_sequence,
+#               ctx, msp, segs, x_pos, y_pos, space, align, step, margin, down_to, ref_entity):
 def _attempt2(segment_text, sequence, scale_factor, lenght_sequence, height_sequence,
-              ctx, msp, segs, x_pos, y_pos, space, align, step, margin, down_to, ref_entity):
+              ctx, msp, segs, x_pos, y_pos, space, align, step, margin, down_to, ref_entity, start_y):
     """
     Tentativo 2: ruota la geometria attorno all'entità di riferimento più lunga,
     cerca spazio nel sistema ruotato, poi ruota la sequenza trovata.
@@ -167,7 +169,7 @@ def _attempt2(segment_text, sequence, scale_factor, lenght_sequence, height_sequ
     if (height_sequence + 2 * margin) > available_height_r:
         return SequenceText()
 
-    start_y_r = comp_start_y_rotated(segs_rotated, ctx_rotated.min_y, ref_pivot)
+    start_y_r = comp_start_y_rotated(segs_rotated, ctx_rotated.min_y, ref_pivot, anchor_margin=start_y)
 
     x, y = find_space_for_sequence(
         lenght_sequence, height_sequence, ctx_rotated,
@@ -244,5 +246,5 @@ def place_sequence(doc, segment_text, scale_factor, excluded_layers=None, avoid_
     # ── Tentativo 2: sistema ruotato ──────────────────────────────────────
     return _attempt2(
         segment_text, sequence, scale_factor, lenght_sequence, height_sequence,
-        ctx, msp, segs, x_pos, y_pos, space, align, step, margin, down_to, ref_entity
+        ctx, msp, segs, x_pos, y_pos, space, align, step, margin, down_to, ref_entity, start_y
     )
