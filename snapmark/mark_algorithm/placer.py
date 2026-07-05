@@ -61,9 +61,6 @@ def find_space_for_sequence(lenght_sequence, height_sequence, ctx, align, start_
             if len(x_intercept_top) > 1:
 
                 shared_spaces_list = find_shared_spaces(x_intercept_top, x_intercept_bottom)
-
-                # if abs(y - 90.0) < 2:
-                #     print(f"[DEBUG INTERCEPT] y={y:.1f} bottom={x_intercept_bottom} top={x_intercept_top} shared={shared_spaces_list}")
                 if len(shared_spaces_list) > 0:
                     if align == 'r':
                         shared_spaces_list = shared_spaces_list[::-1]
@@ -80,24 +77,64 @@ def find_space_for_sequence(lenght_sequence, height_sequence, ctx, align, start_
                             x_left, x_right = spaces[0], spaces[1]
                             break
                         
-                if is_space == True:
-                    if align == 'l':
-                        start_x = x_left + margin
-                    elif align == 'r':
-                        start_x = x_right - lenght_sequence - margin
-                    else:
-                        start_x_middle = middle_point - (lenght_sequence / 2)
-                        if x_right - (lenght_sequence/2) > middle_point > x_left + (lenght_sequence / 2):
-                            start_x = start_x_middle
-                        else:
-                            start_x = ((x_right - x_left) - lenght_sequence) / 2 + x_left
-                            if start_x > start_x_middle:
-                                start_x = x_left + margin
-                            else:
-                                start_x = x_right - lenght_sequence - margin
-                    start_y = y
-                    break
+                # if is_space == True:
+                #     if align == 'l':
+                #         start_x = x_left + margin
+                #     elif align == 'r':
+                #         start_x = x_right - lenght_sequence - margin
+                #     else:
+                #         start_x_middle = middle_point - (lenght_sequence / 2)
+                #         if x_right - (lenght_sequence/2) > middle_point > x_left + (lenght_sequence / 2):
+                #             start_x = start_x_middle
+                #         else:
+                #             start_x = ((x_right - x_left) - lenght_sequence) / 2 + x_left
+                #             if start_x > start_x_middle:
+                #                 start_x = x_left + margin
+                #             else:
+                #                 start_x = x_right - lenght_sequence - margin
+                #     start_y = y
+                #     break
     
+                if is_space == True:
+                                    if align == 'l':
+                                        candidate_x = x_left + margin
+                                    elif align == 'r':
+                                        candidate_x = x_right - lenght_sequence - margin
+                                    else:
+                                        start_x_middle = middle_point - (lenght_sequence / 2)
+                                        if x_right - (lenght_sequence/2) > middle_point > x_left + (lenght_sequence / 2):
+                                            candidate_x = start_x_middle
+                                        else:
+                                            candidate_x = ((x_right - x_left) - lenght_sequence) / 2 + x_left
+                                            if candidate_x > start_x_middle:
+                                                candidate_x = x_left + margin
+                                            else:
+                                                candidate_x = x_right - lenght_sequence - margin
+
+                                    if candidate_x + lenght_sequence + margin > max_x:
+                                        continue
+                                    if y + height_sequence + margin > max_y:
+                                        continue
+
+                                    start_x = candidate_x
+                                    start_y = y
+                                    break
+
+
+    # if start_x is None:
+    #     if y_to_try == []:
+    #         print('Sequence needs to be adjusted due to y values.')
+    #     else:
+    #         print('Sequence needs to be adjusted due to x values.')
+    #     return None, None
+    # else:
+    #     if start_x + lenght_sequence + margin > max_x:
+    #         return None, None
+    #     if start_y + height_sequence + margin > max_y:
+    #         return None, None
+    #     return start_x, start_y
+    
+
     if start_x is None:
         if y_to_try == []:
             print('Sequence needs to be adjusted due to y values.')
@@ -105,13 +142,10 @@ def find_space_for_sequence(lenght_sequence, height_sequence, ctx, align, start_
             print('Sequence needs to be adjusted due to x values.')
         return None, None
     else:
-        if start_x + lenght_sequence + margin > max_x:
-            return None, None
-        if start_y + height_sequence + margin > max_y:
-            return None, None
         return start_x, start_y
-    
-  
+
+
+
 def find_space_between_interceptions(x_left, x_right, lenght_sequence, height_sequence, segs, margin, y, avoid_segs=None, ctx=None):
     EPS = 1e-6
 

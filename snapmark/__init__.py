@@ -93,7 +93,7 @@ from .utils.helpers import (
 
 
 # ========== METADATA ==========
-__version__ = "2.2.2"
+__version__ = "2.2.3"
 __author__ = "serg_you_lin"
 __all__ = [
     # Shortcuts (main API)
